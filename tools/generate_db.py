@@ -29,16 +29,20 @@ def generate_db_for_project(project_path, build_sys):
     elif build_sys == 'cmake':
         _generate_db_for_cmake_project(project_path)
 
+def _run_command(cmd, cwd):
+    retcode = subprocess.call(cmd, cwd=cwd)
+    if retcode != 0:
+        print("Running {} command failed!".format(cmd))
+        os._exit(-1)
+
 def _generate_db_for_qmake_project(project_path):
-    pass
+    _run_command(['qmake'], project_path)
+    _run_command(['make'], project_path)
+    _run_command(['bear', 'make'], project_path)
+    _move_file_to_db(project_path)
 
 def _generate_db_for_cmake_project(project_path):
-    retcode = subprocess.call(['cmake', '-DCMAKE_EXPORT_COMPILE_COMMANDS=1'], \
-                              cwd=project_path)
-    if retcode != 0:
-        print("Running cmake command failed!")
-        return
-
+    _run_command(['cmake', '-DCMAKE_EXPORT_COMPILE_COMMANDS=1'], project_path)
     _move_file_to_db(project_path)
 
 def _move_file_to_db(project_path):
