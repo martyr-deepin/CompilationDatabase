@@ -12,8 +12,9 @@ import glob
 import shutil
 import subprocess
 
-def print_usage():
+def print_usage_and_exit():
     print(__doc__)
+    os._exit(-1)
 
 def guess_build_system(project_path):
     if glob.glob("{}/*.pro".format(project_path)):
@@ -55,7 +56,7 @@ def _move_file_to_db(project_path):
 
 def main():
     if (len(sys.argv) != 2):
-        print_usage()
+        print_usage_and_exit()
 
     project_path = sys.argv[1]
     build_sys = guess_build_system(project_path)
