@@ -29,15 +29,16 @@ def generate_db_for_project(project_path, build_sys):
     elif build_sys == 'cmake':
         _generate_db_for_cmake_project(project_path)
 
-def _run_command(cmd, cwd):
+def _run_command(cmd, cwd=None, exit_on_failure=True):
     retcode = subprocess.call(cmd, cwd=cwd)
-    if retcode != 0:
+    if retcode != 0 and exit_on_failure:
         print("Running {} command failed!".format(cmd))
         os._exit(-1)
+    return retcode
 
 def _generate_db_for_qmake_project(project_path):
     _run_command(['qmake'], project_path)
-    _run_command(['make'], project_path)
+    _run_command(['make', 'clean'], project_path)
     _run_command(['bear', 'make'], project_path)
     _move_file_to_db(project_path)
 
@@ -56,7 +57,12 @@ def _move_file_to_db(project_path):
     src_file = os.path.join(project_path, 'compile_commands.json')
     dest_file = os.path.join(db_project_dir, 'compile_commands.json')
     shutil.move(src_file, dest_file)
-    
+
+def check_dep_tools():
+    retcode = _run_command(['which', 'bear', 'qmake', 'cmake', 'make'])
+    if retcode != 0:
+        print('required tools not found.')
+        os._exit(-1)
 
 def main():
     if (len(sys.argv) != 2):
