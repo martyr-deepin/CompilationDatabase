@@ -28,6 +28,8 @@ def generate_db_for_project(project_path, build_sys):
         _generate_db_for_qmake_project(project_path)
     elif build_sys == 'cmake':
         _generate_db_for_cmake_project(project_path)
+    db_file = _move_file_to_db(project_path)
+    _process_db_file(db_file, project_path)
 
 def _run_command(cmd, cwd=None, exit_on_failure=True):
     retcode = subprocess.call(cmd, cwd=cwd)
@@ -40,11 +42,9 @@ def _generate_db_for_qmake_project(project_path):
     _run_command(['qmake'], project_path)
     _run_command(['make', 'clean'], project_path)
     _run_command(['bear', 'make'], project_path)
-    _move_file_to_db(project_path)
 
 def _generate_db_for_cmake_project(project_path):
     _run_command(['cmake', '-DCMAKE_EXPORT_COMPILE_COMMANDS=1'], project_path)
-    _move_file_to_db(project_path)
 
 def _move_file_to_db(project_path):
     dirname = os.path.dirname
@@ -57,6 +57,21 @@ def _move_file_to_db(project_path):
     src_file = os.path.join(project_path, 'compile_commands.json')
     dest_file = os.path.join(db_project_dir, 'compile_commands.json')
     shutil.move(src_file, dest_file)
+    return dest_file
+
+def _process_db_file(db_file, project_path):
+    '''
+    _process_db_file processes the generated db file, replace the local project
+    path with a fixed one, '/sources/dde-dock' .e.g.
+    '''
+    project_name = os.path.basename(project_path)
+    with open(db_file, 'r+') as _file:
+        content = _file.read()
+        content = content.replace(project_path, \
+                                  os.path.join('/sources/', project_name))
+        _file.seek(0)
+        _file.truncate()
+        _file.write(content)
 
 def check_dep_tools():
     retcode = _run_command(['which', 'bear', 'qmake', 'cmake', 'make'])
@@ -68,7 +83,8 @@ def main():
     if (len(sys.argv) != 2):
         print_usage_and_exit()
 
-    project_path = sys.argv[1]
+    # project_path should be absolute path, _process_db_file relies on this.
+    project_path = os.path.abspath(sys.argv[1])
     build_sys = guess_build_system(project_path)
     if build_sys:
         generate_db_for_project(project_path, build_sys)
